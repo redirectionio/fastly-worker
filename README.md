@@ -2,6 +2,8 @@
 
 This project contains the worker code that can be deployed to fastly@edge.
 
+You can read more [documentation on redirection.io website](https://redirection.io/documentation/developer-documentation/fastly-compute-edge-integration)
+
 ## Requirements
 
 To build this project, you'll need
