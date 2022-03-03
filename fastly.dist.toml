@@ -1,0 +1,17 @@
+authors = ["Grégoire Pineau <lyrixx@lyrixx.info>"]
+description = "redirection.io worker"
+language = "rust"
+manifest_version = 2
+name = "fastly"
+service_id = ""
+
+[local_server]
+  [local_server.backends]
+    [local_server.backends.backend_host]
+      url = "http://www.example.com/" # URL to the backend
+    [local_server.backends.redirectionio]
+      url = "https://agent.redirection.io"
+  [local_server.dictionaries]
+    [local_server.dictionaries.configuration]
+      file = "redirectionio.json"
+      format = "json"

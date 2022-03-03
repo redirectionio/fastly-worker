@@ -1,0 +1,5 @@
+/bin/
+/fastly.toml
+/pkg/
+/redirectionio.json
+/target/
