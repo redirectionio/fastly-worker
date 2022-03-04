@@ -15,7 +15,7 @@ You will also need [fastly toolchain](https://github.com/fastly/cli).
 Copy `fastly.dist.toml` to `fastly.toml` and adapt it according to your need.
 
 Note: You only need to adapt the URL to make it works locally.
-If you only publish the worker, you can keep the the file as it.
+If you only publish the worker, you can keep the file as it.
 
 ### Use a local fastly server
 
