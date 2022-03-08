@@ -310,7 +310,7 @@ impl Application {
             status_code,
             &response_headers,
             Some(action),
-            format!("fastly-worker/{}", self.agent_version).as_str(),
+            format!("redirectionio-fastly:{}", self.agent_version).as_str(),
             timestamp,
             match rio_request.remote_addr {
                 Some(ref addr) => addr.to_string(),
