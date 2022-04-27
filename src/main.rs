@@ -245,7 +245,13 @@ impl Application {
         }
 
         match response.get_header(header::CONTENT_TYPE) {
-            Some(content_type_value) if content_type_value.to_str().unwrap().contains("utf-8") => {
+            Some(content_type_value)
+                if content_type_value
+                    .to_str()
+                    .unwrap()
+                    .to_lowercase()
+                    .contains("utf-8") =>
+            {
                 ()
             }
             _ => return Ok(response),
