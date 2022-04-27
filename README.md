@@ -8,7 +8,7 @@ You can read more [documentation on redirection.io website](https://redirection.
 
 To build this project, you'll need
 [Rust](https://www.rust-lang.org/tools/install) and [cargo](https://crates.io/).
-You will also need [fastly toolchain](https://github.com/fastly/cli).
+You will also need [fastly toolchain](https://github.com/fastly/cli) in version 2+.
 
 ## Usage
 

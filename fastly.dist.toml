@@ -12,6 +12,6 @@ service_id = ""
     [local_server.backends.redirectionio]
       url = "https://agent.redirection.io"
   [local_server.dictionaries]
-    [local_server.dictionaries.configuration]
+    [local_server.dictionaries.redirectionio]
       file = "redirectionio.json"
       format = "json"
