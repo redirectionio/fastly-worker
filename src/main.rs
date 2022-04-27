@@ -12,6 +12,7 @@ use serde_json::from_str as json_decode;
 use serde_json::to_string as json_encode;
 use std::io::Read;
 use std::str::FromStr;
+use std::string::FromUtf8Error;
 
 // Internal stuff
 const AGENT_VERSION: &str = "dev";
@@ -41,6 +42,30 @@ quick_error! {
         MissingAddRuleIdsHeader (backend_name: String) {
             display("missing \"add_rule_ids_header\"")
         }
+    }
+}
+
+quick_error! {
+    #[derive(Debug)]
+    enum InternalError {
+        EncodingNotSupported {
+            display("Encoding not compressed")
+        }
+        DecodingFailed (e: String) {
+            display("Decoding response failed")
+        }
+    }
+}
+
+impl From<std::io::Error> for InternalError {
+    fn from(e: std::io::Error) -> Self {
+        InternalError::DecodingFailed(e.to_string())
+    }
+}
+
+impl From<FromUtf8Error> for InternalError {
+    fn from(e: FromUtf8Error) -> Self {
+        InternalError::DecodingFailed(e.to_string())
     }
 }
 
@@ -257,16 +282,12 @@ impl Application {
             _ => return Ok(response),
         }
 
-        let body = response.take_body();
-        let body_orig = match response.get_header(header::CONTENT_ENCODING) {
-            Some(_) => {
-                let mut decoder = Decoder::new(body).unwrap();
-                let mut decoded_data = Vec::new();
-                decoder.read_to_end(&mut decoded_data).unwrap();
-
-                String::from_utf8(decoded_data).unwrap()
+        let body_orig = match decode_original_body(response.clone_with_body()) {
+            Ok(body_orig) => body_orig,
+            Err(e) => {
+                println!("Can not decode original body: {}", e);
+                return Ok(response);
             }
-            None => body.into_string(),
         };
 
         let body = match action.create_filter_body(response.get_status().as_u16()) {
@@ -357,5 +378,23 @@ impl Application {
                 result.err().unwrap()
             );
         }
+    }
+}
+
+fn decode_original_body(mut response: Response) -> Result<String, InternalError> {
+    let body = response.take_body();
+
+    match response.get_header(header::CONTENT_ENCODING) {
+        None => Ok(body.into_string()),
+        Some(encoding) => match encoding.to_str().unwrap() {
+            "gzip" => {
+                let mut decoder = Decoder::new(body)?;
+                let mut decoded_data = Vec::new();
+                decoder.read_to_end(&mut decoded_data)?;
+
+                Ok(String::from_utf8(decoded_data)?)
+            }
+            _ => return Err(InternalError::EncodingNotSupported),
+        },
     }
 }
