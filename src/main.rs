@@ -182,7 +182,10 @@ impl Application {
         let json = match json_encode(&rio_request) {
             Ok(json) => json,
             Err(error) => {
-                println!("Can not serialize redirection_io request: {}", error);
+                println!(
+                    "Cannot get action from API. Cannot serialize redirection_io request: {}",
+                    error
+                );
                 return None;
             }
         };
@@ -200,15 +203,26 @@ impl Application {
         let mut response = match response {
             Ok(response) => response,
             Err(error) => {
-                println!("Can not send redirection_io request: {}", error);
+                println!(
+                    "Cannot get action from API. Cannot send redirection_io request: {}",
+                    error
+                );
                 return None;
             }
         };
 
+        if response.get_status() != 200 {
+            println!(
+                "Cannot get action from API. Returned status {}",
+                response.get_status()
+            );
+            return None;
+        }
+
         match json_decode(&response.take_body().into_string()) {
             Ok(action) => Some(action),
             Err(error) => {
-                println!("Can not deserialize redirection_io API response: {}", error);
+                println!("Cannot get action from API. Cannot deserialize redirection_io API response: {}", error);
                 None
             }
         }
