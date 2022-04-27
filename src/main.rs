@@ -163,7 +163,10 @@ impl Application {
         };
 
         let response = Request::post(format!("{}/{}/action", self.api_endpoint, self.token))
-            .with_header("User-Agent", format!("fastly-worker/{}", self.agent_version))
+            .with_header(
+                "User-Agent",
+                format!("fastly-worker/{}", self.agent_version),
+            )
             .with_header("x-redirectionio-instance-name", self.instance_name.clone())
             .with_body(json)
             .with_version(Version::HTTP_11)
@@ -190,7 +193,9 @@ impl Application {
         let status_code_before_response = action.get_status_code(0);
 
         let accept_encoding = match req.get_header(header::ACCEPT_ENCODING) {
-            Some(accept_encoding_value) if accept_encoding_value.to_str().unwrap().contains("gzip") => {
+            Some(accept_encoding_value)
+                if accept_encoding_value.to_str().unwrap().contains("gzip") =>
+            {
                 req.set_header(header::ACCEPT_ENCODING, "gzip");
                 true
             }
@@ -229,14 +234,20 @@ impl Application {
             }
         }
 
-        let headers = action.filter_headers(headers, response.get_status().as_u16(), self.add_rule_ids_header);
+        let headers = action.filter_headers(
+            headers,
+            response.get_status().as_u16(),
+            self.add_rule_ids_header,
+        );
 
         for header in headers {
             response.set_header(header.name, header.value);
         }
 
         match response.get_header(header::CONTENT_TYPE) {
-            Some(content_type_value) if content_type_value.to_str().unwrap().contains("utf-8") => (),
+            Some(content_type_value) if content_type_value.to_str().unwrap().contains("utf-8") => {
+                ()
+            }
             _ => return Ok(response),
         }
 
@@ -325,14 +336,20 @@ impl Application {
         };
 
         let result = Request::post(format!("{}/{}/log", self.api_endpoint, self.token))
-            .with_header("User-Agent", format!("fastly-worker/{}", self.agent_version))
+            .with_header(
+                "User-Agent",
+                format!("fastly-worker/{}", self.agent_version),
+            )
             .with_header("x-redirectionio-instance-name", self.instance_name.clone())
             .with_body(json)
             .with_version(Version::HTTP_11)
             .send("redirectionio");
 
         if result.is_err() {
-            println!("Can not send \"log\" request to redirection.io: {}", result.err().unwrap());
+            println!(
+                "Can not send \"log\" request to redirection.io: {}",
+                result.err().unwrap()
+            );
         }
     }
 }
