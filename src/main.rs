@@ -25,6 +25,11 @@ struct Application {
     add_rule_ids_header: bool,
     agent_version: &'static str,
     api_endpoint: &'static str,
+    context: Context,
+}
+
+struct Context {
+    request: Request,
 }
 
 quick_error! {
@@ -71,7 +76,7 @@ impl From<FromUtf8Error> for InternalError {
 
 #[fastly::main]
 fn main(req: Request) -> Result<Response, Error> {
-    let application = match Application::new() {
+    let application = match Application::new(&req) {
         Ok(app) => app,
         Err(error) => match error {
             ConfigurationError::MissingBackendName => {
@@ -115,7 +120,7 @@ fn main(req: Request) -> Result<Response, Error> {
 }
 
 impl Application {
-    pub fn new() -> Result<Self, ConfigurationError> {
+    pub fn new(req: &Request) -> Result<Self, ConfigurationError> {
         let configuration = Dictionary::open("redirectionio");
 
         let backend_name = match configuration.get("backend_name") {
@@ -136,16 +141,17 @@ impl Application {
         };
         let add_rule_ids_header = add_rule_ids_header == "true";
 
-        let application = Application {
+        Ok(Application {
             backend_name,
             token,
             instance_name,
             add_rule_ids_header,
             agent_version: AGENT_VERSION,
             api_endpoint: API_ENDPOINT,
-        };
-
-        Ok(application)
+            context: Context {
+                request: req.clone_without_body(),
+            },
+        })
     }
 
     fn create_rio_request(&self, req: &Request) -> Option<RedirectionioRequest> {
@@ -183,8 +189,9 @@ impl Application {
             Ok(json) => json,
             Err(error) => {
                 println!(
-                    "Cannot get action from API. Cannot serialize redirection_io request: {}",
-                    error
+                    "Cannot get action from API. Cannot serialize redirection_io request: {}. URL: {}",
+                    error,
+                    self.context.request.get_url_str()
                 );
                 return None;
             }
@@ -204,8 +211,9 @@ impl Application {
             Ok(response) => response,
             Err(error) => {
                 println!(
-                    "Cannot get action from API. Cannot send redirection_io request: {}",
-                    error
+                    "Cannot get action from API. Cannot send redirection_io request: {}. URL: {}",
+                    error,
+                    self.context.request.get_url_str()
                 );
                 return None;
             }
@@ -213,8 +221,9 @@ impl Application {
 
         if response.get_status() != 200 {
             println!(
-                "Cannot get action from API. Returned status {}",
-                response.get_status()
+                "Cannot get action from API. Returned status {}. URL: {}",
+                response.get_status(),
+                self.context.request.get_url_str()
             );
             return None;
         }
@@ -222,7 +231,7 @@ impl Application {
         match json_decode(&response.take_body().into_string()) {
             Ok(action) => Some(action),
             Err(error) => {
-                println!("Cannot get action from API. Cannot deserialize redirection_io API response: {}", error);
+                println!("Cannot get action from API. Cannot deserialize redirection_io API response: {}. URL: {}", error, self.context.request.get_url_str());
                 None
             }
         }
@@ -299,7 +308,11 @@ impl Application {
         let body_orig = match decode_original_body(response.clone_with_body()) {
             Ok(body_orig) => body_orig,
             Err(e) => {
-                println!("Can not decode original body: {}", e);
+                println!(
+                    "Can not decode original body: {}. URL: {}",
+                    e,
+                    self.context.request.get_url_str()
+                );
                 return Ok(response);
             }
         };
@@ -388,8 +401,9 @@ impl Application {
 
         if result.is_err() {
             println!(
-                "Can not send \"log\" request to redirection.io: {}",
-                result.err().unwrap()
+                "Can not send \"log\" request to redirection.io: {}. URL: {}",
+                result.err().unwrap(),
+                self.context.request.get_url_str()
             );
         }
     }
