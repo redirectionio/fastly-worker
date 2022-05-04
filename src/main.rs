@@ -8,8 +8,10 @@ use libflate::gzip::Decoder;
 use redirectionio::action::Action;
 use redirectionio::api::Log;
 use redirectionio::http::{Header, Request as RedirectionioRequest};
+use serde::Serialize;
 use serde_json::from_str as json_decode;
 use serde_json::to_string as json_encode;
+use std::collections::HashMap;
 use std::io::Read;
 use std::str::FromStr;
 use std::string::FromUtf8Error;
@@ -20,6 +22,7 @@ const API_ENDPOINT: &str = "https://agent.redirection.io";
 
 struct Application {
     backend_name: String,
+    has_logger: bool,
     token: String,
     instance_name: String,
     add_rule_ids_header: bool,
@@ -30,6 +33,12 @@ struct Application {
 
 struct Context {
     request: Request,
+}
+
+#[derive(Debug, Serialize)]
+struct FastlyLog {
+    message: String,
+    context: HashMap<&'static str, String>,
 }
 
 quick_error! {
@@ -100,6 +109,8 @@ fn main(req: Request) -> Result<Response, Error> {
         },
     };
 
+    application.fastly_log_info("Start worker".to_string(), None);
+
     let rio_request = match application.create_rio_request(&req) {
         Some(rio_request) => rio_request,
         None => return Ok(req.send(application.backend_name)?),
@@ -141,8 +152,26 @@ impl Application {
         };
         let add_rule_ids_header = add_rule_ids_header == "true";
 
+        let mut has_logger = false;
+        if let Some(log_endpoint) = configuration.get("log_endpoint") {
+            has_logger = true;
+
+            let log_level = configuration.get("log_level").unwrap_or("warn".to_string());
+            let log_level = match log::LevelFilter::from_str(log_level.as_str()) {
+                Ok(level) => level,
+                Err(_) => {
+                    println!("The log level \"{}\" is not valid", log_level);
+
+                    log::LevelFilter::Warn
+                }
+            };
+
+            log_fastly::init_simple(log_endpoint, log_level);
+        }
+
         Ok(Application {
             backend_name,
+            has_logger,
             token,
             instance_name,
             add_rule_ids_header,
@@ -188,11 +217,14 @@ impl Application {
         let json = match json_encode(&rio_request) {
             Ok(json) => json,
             Err(error) => {
-                println!(
-                    "Cannot get action from API. Cannot serialize redirection_io request: {}. URL: {}",
-                    error,
-                    self.context.request.get_url_str()
+                self.fastly_log_error(
+                    format!(
+                        "Cannot get action from API. Cannot serialize redirection_io request: {}.",
+                        error,
+                    ),
+                    None,
                 );
+
                 return None;
             }
         };
@@ -210,28 +242,43 @@ impl Application {
         let mut response = match response {
             Ok(response) => response,
             Err(error) => {
-                println!(
-                    "Cannot get action from API. Cannot send redirection_io request: {}. URL: {}",
-                    error,
-                    self.context.request.get_url_str()
+                self.fastly_log_error(
+                    format!(
+                        "Cannot get action from API. Cannot send redirection_io request: {}.",
+                        error,
+                    ),
+                    None,
                 );
+
                 return None;
             }
         };
 
         if response.get_status() != 200 {
-            println!(
-                "Cannot get action from API. Returned status {}. URL: {}",
-                response.get_status(),
-                self.context.request.get_url_str()
+            self.fastly_log_error(
+                format!(
+                    "Cannot get action from API. Returned status {}.",
+                    response.get_status(),
+                ),
+                Some(HashMap::from([
+                    ("status", response.get_status().to_string()),
+                    ("body", response.take_body_str()),
+                ])),
             );
+
             return None;
         }
 
         match json_decode(&response.take_body().into_string()) {
             Ok(action) => Some(action),
             Err(error) => {
-                println!("Cannot get action from API. Cannot deserialize redirection_io API response: {}. URL: {}", error, self.context.request.get_url_str());
+                self.fastly_log_error(
+                    format!("Cannot get action from API. Cannot deserialize redirection_io API response: {}.", error),
+                    Some(HashMap::from([
+                        ("status", response.get_status().to_string()),
+                        ("body", response.take_body_str()),
+                    ])),
+                );
                 None
             }
         }
@@ -308,10 +355,9 @@ impl Application {
         let body_orig = match decode_original_body(response.clone_with_body()) {
             Ok(body_orig) => body_orig,
             Err(e) => {
-                println!(
-                    "Can not decode original body: {}. URL: {}",
-                    e,
-                    self.context.request.get_url_str()
+                self.fastly_log_error(
+                    format!("Can not decode original body: {}.", e),
+                    Some(HashMap::from([("body", response.take_body_str())])),
                 );
                 return Ok(response);
             }
@@ -400,12 +446,54 @@ impl Application {
             .send("redirectionio");
 
         if result.is_err() {
-            println!(
-                "Can not send \"log\" request to redirection.io: {}. URL: {}",
-                result.err().unwrap(),
-                self.context.request.get_url_str()
+            self.fastly_log_error(
+                format!(
+                    "Can not send \"log\" request to redirection.io: {}.",
+                    result.err().unwrap()
+                ),
+                None,
             );
         }
+    }
+
+    fn fastly_log_error(&self, message: String, context: Option<HashMap<&'static str, String>>) {
+        self.fastly_log(message, context, log::Level::Error);
+    }
+
+    fn fastly_log_info(&self, message: String, context: Option<HashMap<&'static str, String>>) {
+        self.fastly_log(message, context, log::Level::Info);
+    }
+
+    fn fastly_log(
+        &self,
+        message: String,
+        context: Option<HashMap<&'static str, String>>,
+        level: log::Level,
+    ) {
+        let mut context = match context {
+            Some(context) => context,
+            None => HashMap::new(),
+        };
+
+        context.insert("url", self.context.request.get_url_str().to_string());
+        context.insert("method", self.context.request.get_method_str().to_string());
+        context.insert("date", chrono::offset::Utc::now().to_string());
+        context.insert("level", level.to_string());
+
+        let log = FastlyLog { message, context };
+
+        match json_encode(&log) {
+            Ok(json) => {
+                if level == log::Level::Error {
+                    println!("{}", json);
+                }
+
+                if self.has_logger {
+                    log::log!(level, "{}", json)
+                }
+            }
+            Err(_) => return,
+        };
     }
 }
 

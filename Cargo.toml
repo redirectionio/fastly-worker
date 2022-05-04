@@ -9,9 +9,12 @@ publish = false
 debug = 1
 
 [dependencies]
+chrono = "0.4"
 fastly = "^0.8.0"
 futures = "^0.3.19"
 libflate = "1.1.0"
+log = "^0.4.17"
+log-fastly = "^0.8.5"
 quick-error = "^2.0.1"
 redirectionio = { git = "https://github.com/redirectionio/libredirectionio", branch = "master" }
 # Uncomment the following line to debug

@@ -2,5 +2,7 @@
     "backend_name": "backend_host",
     "token": "FIXME",
     "instance_name": "undefined",
-    "add_rule_ids_header": "true"
+    "add_rule_ids_header": "true",
+    "log_endpoint": "logger",
+    "log_level": "info"
 }

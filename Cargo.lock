@@ -362,9 +362,9 @@ checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
 
 [[package]]
 name = "fastly"
-version = "0.8.2"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04afdcd9598aacc1d1e5072c76d4b3cbc0090a77e8f27e17a5e42856678b2a67"
+checksum = "cda9049e4227a6eb29f44f539fda339d8ed783ee421cbae152694e51c0d1ad7e"
 dependencies = [
  "anyhow",
  "bytes 0.5.6",
@@ -385,9 +385,9 @@ dependencies = [
 
 [[package]]
 name = "fastly-macros"
-version = "0.8.2"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83b34109e1a3534cdbd7c1adbc395ea3aba7d1530929bcf70f3968207d364fc8"
+checksum = "7924a1c03be098a2b8338ba46013b178a844e3df08cb2011793f9bcfb92c7f6a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -396,9 +396,9 @@ dependencies = [
 
 [[package]]
 name = "fastly-shared"
-version = "0.8.2"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa91c9da69265c84950faeba575efa14f8fcbdda176a8f7b3b65dd06ba380594"
+checksum = "2ee55f605927c28e19cf95c9df9914decd3fe5cfcc035548bb13b7e207ac7a3f"
 dependencies = [
  "bitflags",
  "http",
@@ -407,9 +407,9 @@ dependencies = [
 
 [[package]]
 name = "fastly-sys"
-version = "0.8.2"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47047d795f47d23a0b0bb04ace77f94336c99ef280d37e5460e069c4068f232b"
+checksum = "83b14615b6593967e390ac5e7281f7c126b0547af5b77d71abc534322a963df8"
 dependencies = [
  "bitflags",
  "fastly-shared",
@@ -804,11 +804,22 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.14"
+version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
+checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
 dependencies = [
  "cfg-if 1.0.0",
+]
+
+[[package]]
+name = "log-fastly"
+version = "0.8.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df4b4b2cc94489f61e4b84d59409589da8ae9745f42fa728420f087b18d27371"
+dependencies = [
+ "fastly",
+ "log",
+ "regex",
 ]
 
 [[package]]
@@ -1248,9 +1259,12 @@ dependencies = [
 name = "redirectionio-fastly-worker"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "fastly",
  "futures",
  "libflate",
+ "log",
+ "log-fastly",
  "quick-error",
  "redirectionio",
  "serde",
