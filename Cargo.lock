@@ -1251,6 +1251,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "readonly"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1195d8cd0ebd43f09af81cbfabd0105419337d13baf2b537ee6788f2c63f825d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "redirectionio"
 version = "0.1.0"
 source = "git+https://github.com/redirectionio/libredirectionio?branch=master#0042f9aa2e3a3d2d47008e73a5d0a6659c1f0c17"
@@ -1295,6 +1306,7 @@ dependencies = [
  "log",
  "log-fastly",
  "quick-error",
+ "readonly",
  "redirectionio",
  "serde",
  "serde_json",

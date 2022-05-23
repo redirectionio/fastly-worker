@@ -16,6 +16,7 @@ libflate = "1.1.0"
 log = "^0.4.17"
 log-fastly = "^0.8.5"
 quick-error = "^2.0.1"
+readonly = "^0.2.1"
 redirectionio = { git = "https://github.com/redirectionio/libredirectionio", branch = "master" }
 # Uncomment the following line to debug
 # redirectionio = { path = "../../agent/libredirectionio/" }
