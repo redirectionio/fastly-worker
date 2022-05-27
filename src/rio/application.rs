@@ -222,10 +222,7 @@ impl<'a> Application<'a> {
         let body_orig = match decode_original_body(response.clone_with_body()) {
             Ok(body_orig) => body_orig,
             Err(e) => {
-                self.fastly_logger.log_error(
-                    format!("Can not decode original body: {}.", e),
-                    Some(HashMap::from([("body", response.take_body_str())])),
-                );
+                self.fastly_logger.log_error(format!("Can not decode original body: {}.", e), None);
                 return Ok(response);
             }
         };
@@ -333,7 +330,13 @@ fn decode_original_body(mut response: Response) -> Result<String, InternalError>
     let body = response.take_body();
 
     match response.get_header(header::CONTENT_ENCODING) {
-        None => Ok(body.into_string()),
+        None => {
+            // Try to decode the UTF-8 content of the response: avoid using body.into_string which is panicking
+            match String::from_utf8( body.into_bytes()) {
+                Ok(body) => Ok(body),
+                Err(e) => return Err(InternalError::from(e)),
+            }
+        },
         Some(encoding) => match encoding.to_str().unwrap() {
             "gzip" => {
                 let mut decoder = Decoder::new(body)?;
