@@ -151,7 +151,7 @@ impl<'a> Application<'a> {
         }
     }
 
-    pub fn proxy(&self, mut req: Request, action: &mut Action) -> Result<Response, Error> {
+    pub fn proxy(&self, mut req: Request, action: &mut Action) -> Result<(Response, u16), Error> {
         let status_code_before_response = action.get_status_code(0);
 
         let accept_encoding = match req.get_header(header::ACCEPT_ENCODING) {
@@ -172,7 +172,8 @@ impl<'a> Application<'a> {
             r
         };
 
-        let status_code_after_response = action.get_status_code(response.get_status().as_u16());
+        let backend_status_code = response.get_status().as_u16();
+        let status_code_after_response = action.get_status_code(backend_status_code);
 
         if status_code_after_response != 0 {
             response.set_status(status_code_after_response);
@@ -196,11 +197,7 @@ impl<'a> Application<'a> {
             }
         }
 
-        let headers = action.filter_headers(
-            headers,
-            response.get_status().as_u16(),
-            self.add_rule_ids_header,
-        );
+        let headers = action.filter_headers(headers, backend_status_code, self.add_rule_ids_header);
 
         for header in headers {
             response.set_header(header.name, header.value);
@@ -216,18 +213,19 @@ impl<'a> Application<'a> {
             {
                 ()
             }
-            _ => return Ok(response),
+            _ => return Ok((response, backend_status_code)),
         }
 
         let body_orig = match decode_original_body(response.clone_with_body()) {
             Ok(body_orig) => body_orig,
             Err(e) => {
-                self.fastly_logger.log_error(format!("Can not decode original body: {}.", e), None);
-                return Ok(response);
+                self.fastly_logger
+                    .log_error(format!("Can not decode original body: {}.", e), None);
+                return Ok((response, backend_status_code));
             }
         };
 
-        let body = match action.create_filter_body(response.get_status().as_u16()) {
+        let body = match action.create_filter_body(backend_status_code) {
             Some(mut body_filter) => {
                 let mut body = body_filter.filter(body_orig);
                 let last = body_filter.end();
@@ -249,18 +247,17 @@ impl<'a> Application<'a> {
 
         response.set_body(body);
 
-        Ok(response)
+        Ok((response, backend_status_code))
     }
 
     pub fn log(
         &self,
         response: &Response,
+        backend_status_code: u16,
         rio_request: &RedirectionioRequest,
         action: &mut Action,
     ) {
-        let status_code = response.get_status().as_u16();
-
-        if !action.should_log_request(true, status_code) {
+        if !action.should_log_request(true, backend_status_code) {
             return;
         }
 
@@ -287,7 +284,7 @@ impl<'a> Application<'a> {
             .as_secs();
         let log = Log::from_proxy(
             rio_request,
-            status_code,
+            response.get_status().as_u16(),
             &response_headers,
             Some(action),
             format!("redirectionio-fastly:{}", self.agent_version).as_str(),
@@ -332,11 +329,11 @@ fn decode_original_body(mut response: Response) -> Result<String, InternalError>
     match response.get_header(header::CONTENT_ENCODING) {
         None => {
             // Try to decode the UTF-8 content of the response: avoid using body.into_string which is panicking
-            match String::from_utf8( body.into_bytes()) {
+            match String::from_utf8(body.into_bytes()) {
                 Ok(body) => Ok(body),
                 Err(e) => return Err(InternalError::from(e)),
             }
-        },
+        }
         Some(encoding) => match encoding.to_str().unwrap() {
             "gzip" => {
                 let mut decoder = Decoder::new(body)?;

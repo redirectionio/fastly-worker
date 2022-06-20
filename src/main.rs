@@ -60,8 +60,13 @@ fn main(req: Request) -> Result<Response, Error> {
     };
 
     match application.proxy(req, &mut rio_action) {
-        Ok(response) => {
-            application.log(&response, &rio_request, &mut rio_action);
+        Ok((response, backend_status_code)) => {
+            application.log(
+                &response,
+                backend_status_code,
+                &rio_request,
+                &mut rio_action,
+            );
             Ok(response)
         }
         Err(error) => Err(error),
