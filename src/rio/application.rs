@@ -3,6 +3,7 @@ use super::error::InternalError;
 use super::logging::FastlyLogger;
 
 use fastly::http::header;
+use fastly::http::Method;
 use fastly::http::Version;
 use fastly::{Error, Request, Response};
 use libflate::gzip::Decoder;
@@ -164,6 +165,8 @@ impl<'a> Application<'a> {
             _ => false,
         };
 
+        let request_method = req.get_method().clone();
+
         let mut response = if status_code_before_response == 0 {
             req.send(self.backend_name.clone())?
         } else {
@@ -216,36 +219,36 @@ impl<'a> Application<'a> {
             _ => return Ok((response, backend_status_code)),
         }
 
-        let body_orig = match decode_original_body(response.clone_with_body()) {
-            Ok(body_orig) => body_orig,
-            Err(e) => {
-                self.fastly_logger
-                    .log_error(format!("Can not decode original body: {}.", e), None);
-                return Ok((response, backend_status_code));
-            }
-        };
+        if request_method != &Method::HEAD {
+            match action.create_filter_body(backend_status_code) {
+                Some(mut body_filter) => {
+                    let body_orig = match decode_original_body(response.clone_with_body()) {
+                        Ok(body_orig) => body_orig,
+                        Err(e) => {
+                            self.fastly_logger
+                                .log_error(format!("Can not decode original body: {}.", e), None);
+                            return Ok((response, backend_status_code));
+                        }
+                    };
 
-        let body = match action.create_filter_body(backend_status_code) {
-            Some(mut body_filter) => {
-                let mut body = body_filter.filter(body_orig);
-                let last = body_filter.end();
+                    let mut body = body_filter.filter(body_orig);
+                    let last = body_filter.end();
 
-                if !last.is_empty() {
-                    body = format!("{}{}", body, last);
+                    if !last.is_empty() {
+                        body = format!("{}{}", body, last);
+                    }
+
+                    response.set_body(body);
+
+                    if accept_encoding {
+                        response.remove_header(header::CONTENT_ENCODING);
+                        // We let fastly compress the response, save some $
+                        response.set_header("x-compress-hint", "on");
+                    }
                 }
-
-                body
-            }
-            None => body_orig,
-        };
-
-        if accept_encoding {
-            response.remove_header(header::CONTENT_ENCODING);
-            // We let fastly compress the response, save some $
-            response.set_header("x-compress-hint", "on");
+                None => (),
+            };
         }
-
-        response.set_body(body);
 
         Ok((response, backend_status_code))
     }
