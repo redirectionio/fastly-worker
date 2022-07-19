@@ -29,10 +29,9 @@ impl Configuration {
         };
 
         let add_rule_ids_header = match add_rule_ids_header {
-            Some(add_rule_ids_header) => add_rule_ids_header,
-            None => return Err(ConfigurationError::MissingAddRuleIdsHeader(backend_name)),
+            Some(add_rule_ids_header) =>  add_rule_ids_header == "true",
+            None => false,
         };
-        let add_rule_ids_header = add_rule_ids_header == "true";
 
         Ok(Configuration {
             backend_name,
