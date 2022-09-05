@@ -21,10 +21,20 @@ http {
 
     sendfile        on;
 
+    gzip on;
     keepalive_timeout  65;
 
-    gzip on;
+    server {
+        listen       80;
+        server_name  localhost;
 
-    include /etc/nginx/conf.d/*.conf;
+        location / {
+            root   /usr/share/nginx/html;
+            index  index.html index.htm;
+        }
+
+        # allow POST on static pages
+        error_page  405 =200 \$uri;
+    }
 }
 EOF
