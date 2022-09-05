@@ -29,7 +29,7 @@ impl Configuration {
         };
 
         let add_rule_ids_header = match add_rule_ids_header {
-            Some(add_rule_ids_header) =>  add_rule_ids_header == "true",
+            Some(add_rule_ids_header) => add_rule_ids_header == "true",
             None => false,
         };
 

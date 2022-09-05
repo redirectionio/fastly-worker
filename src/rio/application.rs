@@ -172,6 +172,25 @@ impl<'a> Application<'a> {
         } else {
             let mut r = Response::new();
             r.set_status(status_code_before_response);
+            r.append_header(header::CONTENT_TYPE, "text/html; charset=UTF-8");
+            r.set_body(format!(
+                "
+<html>
+<head><title>{}</title></head>
+<body bgcolor=\"white\">
+<center><h1>{}</h1></center>
+</body>
+</html>
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+<!-- a padding to disable MSIE and Chrome friendly error page -->
+",
+                &status_code_before_response, &status_code_before_response
+            ));
             r
         };
 
