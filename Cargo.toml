@@ -10,7 +10,7 @@ debug = 1
 
 [dependencies]
 chrono = "0.4"
-fastly = "^0.8.0"
+fastly = "^0.8.6"
 futures = "^0.3.19"
 log = "^0.4.17"
 log-fastly = "^0.8.5"
