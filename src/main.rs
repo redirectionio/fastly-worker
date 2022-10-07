@@ -6,22 +6,22 @@ mod rio;
 use crate::rio::application::Application;
 use crate::rio::configuration::{Configuration, ConfigurationError};
 use crate::rio::logging::{Context, FastlyLogger};
-use fastly::{Dictionary, Error, Request, Response};
+use fastly::{ConfigStore, Error, Request, Response};
 
 #[fastly::main]
 fn main(req: Request) -> Result<Response, Error> {
-    let redirection_dict = Dictionary::open("redirectionio");
+    let config_store = ConfigStore::open("redirectionio");
     let fastly_logger = FastlyLogger::new(
-        redirection_dict.get("log_endpoint"),
-        redirection_dict.get("log_level"),
+        config_store.get("log_endpoint"),
+        config_store.get("log_level"),
         Context::new(req.clone_without_body()),
     );
 
     let config = match Configuration::new(
-        redirection_dict.get("backend_name"),
-        redirection_dict.get("token"),
-        redirection_dict.get("instance_name"),
-        redirection_dict.get("add_rule_ids_header"),
+        config_store.get("backend_name"),
+        config_store.get("token"),
+        config_store.get("instance_name"),
+        config_store.get("add_rule_ids_header"),
     ) {
         Ok(config) => config,
         Err(error) => {
