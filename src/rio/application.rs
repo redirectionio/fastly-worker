@@ -1,19 +1,16 @@
 use super::configuration::Configuration;
-use super::error::InternalError;
 use super::logging::FastlyLogger;
 
 use fastly::http::header;
 use fastly::http::Method;
 use fastly::http::Version;
 use fastly::{Error, Request, Response};
-use libflate::gzip::Decoder;
 use redirectionio::action::Action;
 use redirectionio::api::Log;
 use redirectionio::http::{Header, Request as RedirectionioRequest};
 use serde_json::from_str as json_decode;
 use serde_json::to_string as json_encode;
 use std::collections::HashMap;
-use std::io::Read;
 use std::str::FromStr;
 
 // Internal stuff
@@ -152,18 +149,8 @@ impl<'a> Application<'a> {
         }
     }
 
-    pub fn proxy(&self, mut req: Request, action: &mut Action) -> Result<(Response, u16), Error> {
+    pub fn proxy(&self, req: Request, action: &mut Action) -> Result<(Response, u16), Error> {
         let status_code_before_response = action.get_status_code(0);
-
-        let accept_encoding = match req.get_header(header::ACCEPT_ENCODING) {
-            Some(accept_encoding_value)
-                if accept_encoding_value.to_str().unwrap().contains("gzip") =>
-            {
-                req.set_header(header::ACCEPT_ENCODING, "gzip");
-                true
-            }
-            _ => false,
-        };
 
         let request_method = req.get_method().clone();
 
@@ -221,8 +208,8 @@ impl<'a> Application<'a> {
 
         let headers = action.filter_headers(headers, backend_status_code, self.add_rule_ids_header);
 
-        for header in headers {
-            response.set_header(header.name, header.value);
+        for header in &headers {
+            response.set_header(header.name.clone(), header.value.clone());
         }
 
         match response.get_header(header::CONTENT_TYPE) {
@@ -239,31 +226,17 @@ impl<'a> Application<'a> {
         }
 
         if request_method != &Method::HEAD {
-            match action.create_filter_body(backend_status_code) {
+            match action.create_filter_body(backend_status_code, &headers) {
                 Some(mut body_filter) => {
-                    let body_orig = match decode_original_body(response.clone_with_body()) {
-                        Ok(body_orig) => body_orig,
-                        Err(e) => {
-                            self.fastly_logger
-                                .log_error(format!("Can not decode original body: {}.", e), None);
-                            return Ok((response, backend_status_code));
-                        }
-                    };
+                    let mut new_response = response.clone_without_body();
+                    let body = response.into_body().into_bytes();
+                    let mut new_body = Vec::new();
 
-                    let mut body = body_filter.filter(body_orig);
-                    let last = body_filter.end();
+                    new_body.extend(body_filter.filter(body));
+                    new_body.extend(body_filter.end());
+                    new_response.set_body(new_body);
 
-                    if !last.is_empty() {
-                        body = format!("{}{}", body, last);
-                    }
-
-                    response.set_body(body);
-
-                    if accept_encoding {
-                        response.remove_header(header::CONTENT_ENCODING);
-                        // We let fastly compress the response, save some $
-                        response.set_header("x-compress-hint", "on");
-                    }
+                    response = new_response;
                 }
                 None => (),
             };
@@ -342,29 +315,5 @@ impl<'a> Application<'a> {
                 None,
             );
         }
-    }
-}
-
-fn decode_original_body(mut response: Response) -> Result<String, InternalError> {
-    let body = response.take_body();
-
-    match response.get_header(header::CONTENT_ENCODING) {
-        None => {
-            // Try to decode the UTF-8 content of the response: avoid using body.into_string which is panicking
-            match String::from_utf8(body.into_bytes()) {
-                Ok(body) => Ok(body),
-                Err(e) => return Err(InternalError::from(e)),
-            }
-        }
-        Some(encoding) => match encoding.to_str().unwrap() {
-            "gzip" => {
-                let mut decoder = Decoder::new(body)?;
-                let mut decoded_data = Vec::new();
-                decoder.read_to_end(&mut decoded_data)?;
-
-                Ok(String::from_utf8(decoded_data)?)
-            }
-            _ => return Err(InternalError::EncodingNotSupported),
-        },
     }
 }

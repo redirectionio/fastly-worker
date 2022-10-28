@@ -12,12 +12,11 @@ debug = 1
 chrono = "0.4"
 fastly = "^0.8.0"
 futures = "^0.3.19"
-libflate = "1.1.0"
 log = "^0.4.17"
 log-fastly = "^0.8.5"
 quick-error = "^2.0.1"
 readonly = "^0.2.1"
-redirectionio = "^2.4.0"
+redirectionio = "^2.5.0"
 # Uncomment the following line to debug
 # redirectionio = { path = "../../agent/libredirectionio/" }
 serde = { version = "1.0", features = ["derive"] }
