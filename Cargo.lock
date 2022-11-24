@@ -603,6 +603,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "glob"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
+
+[[package]]
 name = "globset"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1295,9 +1301,9 @@ dependencies = [
 
 [[package]]
 name = "redirectionio"
-version = "2.5.0"
+version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc255b017f4ab403550757092b3e6f071e04f54e97b7c20b6590363380c2252d"
+checksum = "bc829f5307eb20663feae88ce48bd797a742afda2529591c05a4a267269c9c63"
 dependencies = [
  "cbindgen",
  "cfg-if 1.0.0",
@@ -1306,6 +1312,7 @@ dependencies = [
  "console_error_panic_hook",
  "console_log",
  "flate2",
+ "glob",
  "heck",
  "http",
  "lazy_static",

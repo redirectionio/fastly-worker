@@ -150,7 +150,7 @@ impl<'a> Application<'a> {
     }
 
     pub fn proxy(&self, req: Request, action: &mut Action) -> Result<(Response, u16), Error> {
-        let status_code_before_response = action.get_status_code(0);
+        let status_code_before_response = action.get_status_code(0, None);
 
         let request_method = req.get_method().clone();
 
@@ -182,7 +182,7 @@ impl<'a> Application<'a> {
         };
 
         let backend_status_code = response.get_status().as_u16();
-        let status_code_after_response = action.get_status_code(backend_status_code);
+        let status_code_after_response = action.get_status_code(backend_status_code, None);
 
         if status_code_after_response != 0 {
             response.set_status(status_code_after_response);
@@ -206,7 +206,8 @@ impl<'a> Application<'a> {
             }
         }
 
-        let headers = action.filter_headers(headers, backend_status_code, self.add_rule_ids_header);
+        let headers =
+            action.filter_headers(headers, backend_status_code, self.add_rule_ids_header, None);
 
         for header in &headers {
             response.set_header(header.name.clone(), header.value.clone());
@@ -232,8 +233,8 @@ impl<'a> Application<'a> {
                     let body = response.into_body().into_bytes();
                     let mut new_body = Vec::new();
 
-                    new_body.extend(body_filter.filter(body));
-                    new_body.extend(body_filter.end());
+                    new_body.extend(body_filter.filter(body, None));
+                    new_body.extend(body_filter.end(None));
                     new_response.set_body(new_body);
 
                     response = new_response;
