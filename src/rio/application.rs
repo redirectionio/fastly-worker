@@ -57,20 +57,17 @@ impl<'a> Application<'a> {
         rio_request.method = Some(req.get_method().to_string());
         rio_request.remote_addr = req.get_client_ip_addr();
 
-        for name in req.get_original_header_names().unwrap() {
-            if name.starts_with(':') {
+        for (name, value) in req.get_headers() {
+            let header_name = name.to_string();
+
+            if header_name.starts_with(':') {
                 continue;
             }
 
-            match req.get_header(&name) {
-                Some(value) => {
-                    if let Ok(s) = value.to_str() {
-                        rio_request.add_header(name.to_string(), s.to_string(), true);
-                    } else {
-                        continue; // Invalid UTF-8
-                    }
-                }
-                None => continue,
+            if let Ok(s) = value.to_str() {
+                rio_request.add_header(header_name, s.to_string(), true);
+            } else {
+                continue; // Invalid UTF-8
             }
         }
 
