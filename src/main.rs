@@ -6,11 +6,13 @@ mod rio;
 use crate::rio::application::Application;
 use crate::rio::configuration::{Configuration, ConfigurationError};
 use crate::rio::logging::{Context, FastlyLogger};
+use crate::rio::request_sender::{DirectRequestSender, RequestSender};
 use fastly::{ConfigStore, Error, Request, Response};
 
 #[fastly::main]
 fn main(req: Request) -> Result<Response, Error> {
     let config_store = ConfigStore::open("redirectionio");
+    let req_sender = DirectRequestSender;
     let fastly_logger = FastlyLogger::new(
         config_store.get("log_endpoint"),
         config_store.get("log_level"),
@@ -40,23 +42,23 @@ fn main(req: Request) -> Result<Response, Error> {
                     let message = format!("Fastly worker configuration error: {}.\n", error);
                     fastly_logger.log_error(message.clone(), None);
 
-                    Ok(req.send(backend_name)?)
+                    Ok(req_sender.send(req, backend_name.clone())?)
                 }
             };
         }
     };
 
-    let application = Application::new(&config, &fastly_logger);
+    let application = Application::new(&config, &fastly_logger, &req_sender);
     fastly_logger.log_info("Start worker".to_string(), None);
 
     let rio_request = match application.create_rio_request(&req) {
         Some(rio_request) => rio_request,
-        None => return Ok(req.send(config.backend_name.clone())?),
+        None => return Ok(req_sender.send(req, config.backend_name.clone())?),
     };
 
     let mut rio_action = match application.get_action(&rio_request) {
         Some(rio_action) => rio_action,
-        None => return Ok(req.send(config.backend_name.clone())?),
+        None => return Ok(req_sender.send(req, config.backend_name.clone())?),
     };
 
     match application.proxy(req, &mut rio_action) {

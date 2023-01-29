@@ -1,5 +1,6 @@
 use super::configuration::Configuration;
 use super::logging::FastlyLogger;
+use super::request_sender::RequestSender;
 
 use fastly::http::header;
 use fastly::http::Method;
@@ -25,12 +26,14 @@ pub struct Application<'a> {
     agent_version: &'static str,
     api_endpoint: &'static str,
     fastly_logger: &'a FastlyLogger,
+    request_manager: &'a dyn RequestSender,
 }
 
 impl<'a> Application<'a> {
     pub(crate) fn new(
         configuration: &Configuration,
         fastly_logger: &'a FastlyLogger,
+        request_sender: &'a dyn RequestSender,
     ) -> Application<'a> {
         let backend_name = configuration.backend_name.clone();
         let token = configuration.token.clone();
@@ -43,6 +46,7 @@ impl<'a> Application<'a> {
             instance_name,
             add_rule_ids_header,
             fastly_logger,
+            request_manager: request_sender,
             agent_version: AGENT_VERSION,
             api_endpoint: API_ENDPOINT,
         };
@@ -152,7 +156,7 @@ impl<'a> Application<'a> {
         let request_method = req.get_method().clone();
 
         let mut response = if status_code_before_response == 0 {
-            req.send(self.backend_name.clone())?
+            self.request_manager.send(req, self.backend_name.clone())?
         } else {
             let mut r = Response::new();
             r.set_status(status_code_before_response);
