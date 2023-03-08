@@ -254,7 +254,7 @@ impl<'a> Application<'a> {
         rio_request: &RedirectionioRequest,
         action: &mut Action,
     ) {
-        if !action.should_log_request(true, backend_status_code) {
+        if !action.should_log_request(true, backend_status_code, None) {
             return;
         }
 
@@ -291,6 +291,7 @@ impl<'a> Application<'a> {
                 None => String::from(""),
             }
             .as_str(),
+            None,
         );
 
         let json = match json_encode(&log) {
