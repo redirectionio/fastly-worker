@@ -10,13 +10,13 @@ debug = 1
 
 [dependencies]
 chrono = "0.4"
-fastly = "^0.8.6"
+fastly = "^0.9.8"
 futures = "^0.3.19"
 log = "^0.4.17"
-log-fastly = "^0.8.5"
+log-fastly = "^0.9.8"
 quick-error = "^2.0.1"
 readonly = "^0.2.1"
-redirectionio = "^2.6.0"
+redirectionio = { version = "=2.9.0", default-features = false, features = ["compress"] }
 # Uncomment the following line to debug
 # redirectionio = { path = "../../agent/libredirectionio/" }
 serde = { version = "1.0", features = ["derive"] }
