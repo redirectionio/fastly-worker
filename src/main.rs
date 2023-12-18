@@ -11,6 +11,11 @@ use fastly::{ConfigStore, Error, Request, Response};
 
 #[fastly::main]
 fn main(req: Request) -> Result<Response, Error> {
+    let start_time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|time| time.as_millis())
+        .unwrap_or(0);
     let config_store = ConfigStore::open("redirectionio");
     let req_sender = DirectRequestSender;
     let fastly_logger = FastlyLogger::new(
@@ -68,6 +73,7 @@ fn main(req: Request) -> Result<Response, Error> {
                 backend_status_code,
                 &rio_request,
                 &mut rio_action,
+                start_time,
             );
             Ok(response)
         }

@@ -253,6 +253,7 @@ impl<'a> Application<'a> {
         backend_status_code: u16,
         rio_request: &RedirectionioRequest,
         action: &mut Action,
+        start_time: u128,
     ) {
         if !action.should_log_request(true, backend_status_code, None) {
             return;
@@ -275,17 +276,13 @@ impl<'a> Application<'a> {
             }
         }
 
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
         let log = Log::from_proxy(
             rio_request,
             response.get_status().as_u16(),
             &response_headers,
             Some(action),
             format!("redirectionio-fastly:{}", self.agent_version).as_str(),
-            timestamp,
+            start_time,
             match rio_request.remote_addr {
                 Some(ref addr) => addr.to_string(),
                 None => String::from(""),
