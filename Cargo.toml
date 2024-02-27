@@ -16,7 +16,7 @@ log = "^0.4.17"
 log-fastly = "^0.9.8"
 quick-error = "^2.0.1"
 readonly = "^0.2.1"
-redirectionio = { version = "=2.10.1", default-features = false, features = ["compress"] }
+redirectionio = { version = "=2.11.0", default-features = false, features = ["compress"] }
 # Uncomment the following line to debug
 # redirectionio = { path = "../../agent/libredirectionio/" }
 serde = { version = "1.0", features = ["derive"] }
