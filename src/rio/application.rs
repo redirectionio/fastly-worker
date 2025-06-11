@@ -100,6 +100,7 @@ impl<'a> Application<'a> {
                 "User-Agent",
                 format!("fastly-worker/{}", self.agent_version),
             )
+            .with_header("Content-Type", "application/json; charset=utf-8")
             .with_header("x-redirectionio-instance-name", self.instance_name.clone())
             .with_body(json)
             .with_version(Version::HTTP_11)
@@ -301,6 +302,7 @@ impl<'a> Application<'a> {
                 "User-Agent",
                 format!("fastly-worker/{}", self.agent_version),
             )
+            .with_header("Content-Type", "application/json; charset=utf-8")
             .with_header("x-redirectionio-instance-name", self.instance_name.clone())
             .with_body(json)
             .with_version(Version::HTTP_11)
