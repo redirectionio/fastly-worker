@@ -61,19 +61,29 @@ fn main(req: Request) -> Result<Response, Error> {
         None => return Ok(req_sender.send(req, config.backend_name.clone())?),
     };
 
-    let mut rio_action = match application.get_action(&rio_request) {
-        Some(rio_action) => rio_action,
-        None => return Ok(req_sender.send(req, config.backend_name.clone())?),
-    };
+    let mut rio_action = application.get_action(&rio_request);
+
+    let action_match_time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|time| time.as_millis())
+        .unwrap_or(0);
 
     match application.proxy(req, &mut rio_action) {
         Ok((response, backend_status_code)) => {
+            let proxy_response_time = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .ok()
+                .map(|time| time.as_millis());
+
             application.log(
                 &response,
                 backend_status_code,
                 &rio_request,
                 &mut rio_action,
                 start_time,
+                action_match_time,
+                proxy_response_time,
             );
             Ok(response)
         }

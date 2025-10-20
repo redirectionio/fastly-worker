@@ -78,7 +78,7 @@ impl<'a> Application<'a> {
         Some(rio_request)
     }
 
-    pub fn get_action(&self, rio_request: &RedirectionioRequest) -> Option<Action> {
+    pub fn get_action(&self, rio_request: &RedirectionioRequest) -> Action {
         // FIXME: add some cache // => not now
         let json = match json_encode(&rio_request) {
             Ok(json) => json,
@@ -91,11 +91,13 @@ impl<'a> Application<'a> {
                     None,
                 );
 
-                return None;
+                return Action::default();
             }
         };
 
-        let response = Request::post(format!("{}/{}/action", self.api_endpoint, self.token))
+        let url = format!("{}/{}/action", self.api_endpoint, self.token);
+
+        let response = Request::post(url.as_str())
             .with_header(
                 "User-Agent",
                 format!("fastly-worker/{}", self.agent_version),
@@ -117,7 +119,7 @@ impl<'a> Application<'a> {
                     None,
                 );
 
-                return None;
+                return Action::default();
             }
         };
 
@@ -130,14 +132,15 @@ impl<'a> Application<'a> {
                 Some(HashMap::from([
                     ("status", response.get_status().to_string()),
                     ("body", response.take_body_str()),
+                    ("action_url", url),
                 ])),
             );
 
-            return None;
+            return Action::default();
         }
 
         match json_decode(&response.take_body().into_string()) {
-            Ok(action) => Some(action),
+            Ok(action) => action,
             Err(error) => {
                 self.fastly_logger.log_error(
                     format!("Cannot get action from API. Cannot deserialize redirection_io API response: {}.", error),
@@ -146,7 +149,8 @@ impl<'a> Application<'a> {
                         ("body", response.take_body_str()),
                     ])),
                 );
-                None
+
+                Action::default()
             }
         }
     }
@@ -229,7 +233,7 @@ impl<'a> Application<'a> {
         }
 
         if request_method != &Method::HEAD {
-            match action.create_filter_body(backend_status_code, &headers) {
+            match action.create_filter_body(backend_status_code, &headers, None) {
                 Some(mut body_filter) => {
                     let mut new_response = response.clone_without_body();
                     let body = response.into_body().into_bytes();
@@ -255,6 +259,8 @@ impl<'a> Application<'a> {
         rio_request: &RedirectionioRequest,
         action: &mut Action,
         start_time: u128,
+        action_match_time: u128,
+        proxy_response_time: Option<u128>,
     ) {
         if !action.should_log_request(true, backend_status_code, None) {
             return;
@@ -284,12 +290,13 @@ impl<'a> Application<'a> {
             Some(action),
             format!("redirectionio-fastly:{}", self.agent_version).as_str(),
             start_time,
+            action_match_time,
+            proxy_response_time,
             match rio_request.remote_addr {
                 Some(ref addr) => addr.to_string(),
                 None => String::from(""),
             }
             .as_str(),
-            None,
         );
 
         let json = match json_encode(&log) {
