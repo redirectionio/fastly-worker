@@ -1,0 +1,8 @@
+{
+    "backend_name": "backend_host",
+    "token": "redirection_io_project_key",
+    "instance_name": "test_instance_fastly",
+    "add_rule_ids_header": "true",
+    "log_endpoint": "logger",
+    "log_level": "info"
+}

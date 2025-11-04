@@ -287,7 +287,7 @@ impl<'a> Application<'a> {
             rio_request,
             response.get_status().as_u16(),
             &response_headers,
-            Some(action),
+            action.get_applied_rule_ids_vec(),
             format!("redirectionio-fastly:{}", self.agent_version).as_str(),
             start_time,
             action_match_time,
