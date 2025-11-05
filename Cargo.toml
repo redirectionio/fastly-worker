@@ -10,10 +10,10 @@ debug = 1
 
 [dependencies]
 chrono = "0.4"
-fastly = "^0.9.12"
+fastly = "^0.11.9"
 futures = "^0.3.31"
 log = "^0.4.28"
-log-fastly = "^0.9.12"
+log-fastly = "^0.11.9"
 quick-error = "^2.0.1"
 readonly = "^0.2.13"
 redirectionio = { version = "=3.0.0-beta.2", default-features = false, features = ["compress"] }
