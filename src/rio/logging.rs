@@ -24,10 +24,7 @@ impl FastlyLogger {
         log_level: Option<String>,
         context: Context,
     ) -> FastlyLogger {
-        let has_logger = match log_endpoint {
-            Some(_) => true,
-            None => false,
-        };
+        let has_logger = log_endpoint.is_some();
 
         let log_endpoint = log_endpoint.unwrap_or("".to_string());
         let log_level = log_level.unwrap_or("warn".to_string());
@@ -48,12 +45,12 @@ impl FastlyLogger {
             log_fastly::init_simple(log_endpoint.clone(), log_level);
         }
 
-        return FastlyLogger {
+        FastlyLogger {
             has_logger,
             log_endpoint,
             log_level,
             context,
-        };
+        }
     }
 
     pub fn log_error(&self, message: String, context: Option<HashMap<&'static str, String>>) {
@@ -70,10 +67,7 @@ impl FastlyLogger {
         context: Option<HashMap<&'static str, String>>,
         level: log::Level,
     ) {
-        let mut context = match context {
-            Some(context) => context,
-            None => HashMap::new(),
-        };
+        let mut context = context.unwrap_or_default();
 
         context.insert("url", self.context.request.get_url_str().to_string());
         context.insert("method", self.context.request.get_method_str().to_string());
@@ -82,17 +76,14 @@ impl FastlyLogger {
 
         let log = FastlyLog { message, context };
 
-        match json_encode(&log) {
-            Ok(json) => {
-                if level == log::Level::Error {
-                    println!("{}", json);
-                }
-
-                if self.has_logger {
-                    log::log!(level, "{}", json)
-                }
+        if let Ok(json) = json_encode(&log) {
+            if level == log::Level::Error {
+                println!("{}", json);
             }
-            Err(_) => return,
+
+            if self.has_logger {
+                log::log!(level, "{}", json)
+            }
         };
     }
 }
@@ -104,6 +95,6 @@ pub struct Context {
 
 impl Context {
     pub(crate) fn new(request: Request) -> Context {
-        return Context { request };
+        Context { request }
     }
 }

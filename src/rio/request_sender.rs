@@ -8,7 +8,7 @@ use fastly::{Request, Response};
 pub trait RequestSender {
     #[allow(unused_mut)]
     fn send(&self, req: Request, backend: String) -> Result<Response, SendError> {
-        return req.send(backend);
+        req.send(backend)
     }
 }
 

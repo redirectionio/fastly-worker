@@ -2,9 +2,9 @@ use super::configuration::Configuration;
 use super::logging::FastlyLogger;
 use super::request_sender::RequestSender;
 
-use fastly::http::header;
 use fastly::http::Method;
 use fastly::http::Version;
+use fastly::http::header;
 use fastly::{Error, Request, Response};
 use redirectionio::action::Action;
 use redirectionio::api::Log;
@@ -40,7 +40,7 @@ impl<'a> Application<'a> {
         let instance_name = configuration.instance_name.clone();
         let add_rule_ids_header = configuration.add_rule_ids_header;
 
-        return Application {
+        Application {
             backend_name,
             token,
             instance_name,
@@ -49,7 +49,7 @@ impl<'a> Application<'a> {
             request_manager: request_sender,
             agent_version: AGENT_VERSION,
             api_endpoint: API_ENDPOINT,
-        };
+        }
     }
 
     pub fn create_rio_request(&self, req: &Request) -> Option<RedirectionioRequest> {
@@ -221,37 +221,32 @@ impl<'a> Application<'a> {
 
         match response.get_header(header::CONTENT_TYPE) {
             Some(content_type_value)
-                if content_type_value
-                    .to_str()
-                    .unwrap()
-                    .to_lowercase()
-                    .contains("utf-8") =>
-            {
-                ()
-            }
+            if content_type_value
+                .to_str()
+                .unwrap()
+                .to_lowercase()
+                .contains("utf-8") =>
+                {}
             _ => return Ok((response, backend_status_code)),
         }
 
-        if request_method != &Method::HEAD {
-            match action.create_filter_body(backend_status_code, &headers, None) {
-                Some(mut body_filter) => {
-                    let mut new_response = response.clone_without_body();
-                    let body = response.into_body().into_bytes();
-                    let mut new_body = Vec::new();
+        if request_method != Method::HEAD
+            && let Some(mut body_filter) = action.create_filter_body(backend_status_code, &headers, None) {
+            let mut new_response = response.clone_without_body();
+            let body = response.into_body().into_bytes();
+            let mut new_body = Vec::new();
 
-                    new_body.extend(body_filter.filter(body, None));
-                    new_body.extend(body_filter.end(None));
-                    new_response.set_body(new_body);
+            new_body.extend(body_filter.filter(body, None));
+            new_body.extend(body_filter.end(None));
+            new_response.set_body(new_body);
 
-                    response = new_response;
-                }
-                None => (),
-            };
-        }
+            response = new_response;
+        };
 
         Ok((response, backend_status_code))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn log(
         &self,
         response: &Response,
@@ -296,7 +291,7 @@ impl<'a> Application<'a> {
                 Some(ref addr) => addr.to_string(),
                 None => String::from(""),
             }
-            .as_str(),
+                .as_str(),
         );
 
         let json = match json_encode(&log) {

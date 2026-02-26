@@ -96,5 +96,5 @@ fn generate_synthetic_response(error_message: String, status_code: u16) -> Respo
     response.set_body(error_message);
     response.set_status(status_code);
 
-    return response;
+    response
 }
