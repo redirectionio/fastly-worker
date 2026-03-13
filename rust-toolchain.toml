@@ -1,3 +1,4 @@
 [toolchain]
-channel = "1.90.0"
+# Check https://www.fastly.com/documentation/guides/compute/developer-guides/rust/#rust-language-support for the latest supported Rust version.
+channel = "1.91.1"
 targets = ["wasm32-wasip1"]
