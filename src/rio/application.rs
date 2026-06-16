@@ -212,6 +212,21 @@ impl<'a> Application<'a> {
             }
         }
 
+        // Create the body filter from the original backend response headers, before
+        // header filtering mutates them, so body filters (e.g. html_to_markdown)
+        // evaluate the original content type.
+        let is_utf8_response = response
+            .get_header(header::CONTENT_TYPE)
+            .and_then(|content_type_value| content_type_value.to_str().ok())
+            .map(|content_type_value| content_type_value.to_lowercase().contains("utf-8"))
+            .unwrap_or(false);
+
+        let body_filter = if request_method != Method::HEAD && is_utf8_response {
+            action.create_filter_body(backend_status_code, &headers, None)
+        } else {
+            None
+        };
+
         let headers =
             action.filter_headers(headers, backend_status_code, self.add_rule_ids_header, None);
 
@@ -219,19 +234,7 @@ impl<'a> Application<'a> {
             response.set_header(header.name.clone(), header.value.clone());
         }
 
-        match response.get_header(header::CONTENT_TYPE) {
-            Some(content_type_value)
-            if content_type_value
-                .to_str()
-                .unwrap()
-                .to_lowercase()
-                .contains("utf-8") =>
-                {}
-            _ => return Ok((response, backend_status_code)),
-        }
-
-        if request_method != Method::HEAD
-            && let Some(mut body_filter) = action.create_filter_body(backend_status_code, &headers, None) {
+        if let Some(mut body_filter) = body_filter {
             let mut new_response = response.clone_without_body();
             let body = response.into_body().into_bytes();
             let mut new_body = Vec::new();
