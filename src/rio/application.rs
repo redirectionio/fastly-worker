@@ -261,6 +261,10 @@ impl<'a> Application<'a> {
         proxy_response_time: Option<u128>,
     ) {
         if !action.should_log_request(true, backend_status_code, None) {
+            // Logging was disabled for this request by a "configuration" action: still
+            // count the executed rules, without sending the full request log.
+            self.count_rules(action);
+
             return;
         }
 
@@ -317,6 +321,42 @@ impl<'a> Application<'a> {
             self.fastly_logger.log_error(
                 format!(
                     "Can not send \"log\" request to redirection.io: {}.",
+                    result.err().unwrap()
+                ),
+                None,
+            );
+        }
+    }
+
+    /// Report the ids of the rules executed for a request that was not logged, to count
+    /// their executions without sending the full request log.
+    fn count_rules(&self, action: &Action) {
+        let rule_ids = action.get_applied_rule_ids_vec();
+
+        if rule_ids.is_empty() {
+            return;
+        }
+
+        let json = match json_encode(&rule_ids) {
+            Err(_) => return,
+            Ok(s) => s,
+        };
+
+        let result = Request::post(format!("{}/{}/rule-count", self.api_endpoint, self.token))
+            .with_header(
+                "User-Agent",
+                format!("fastly-worker/{}", self.agent_version),
+            )
+            .with_header("Content-Type", "application/json; charset=utf-8")
+            .with_header("x-redirectionio-instance-name", self.instance_name.clone())
+            .with_body(json)
+            .with_version(Version::HTTP_11)
+            .send("redirectionio");
+
+        if result.is_err() {
+            self.fastly_logger.log_error(
+                format!(
+                    "Can not send \"rule-count\" request to redirection.io: {}.",
                     result.err().unwrap()
                 ),
                 None,
