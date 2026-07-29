@@ -214,14 +214,9 @@ impl<'a> Application<'a> {
 
         // Create the body filter from the original backend response headers, before
         // header filtering mutates them, so body filters (e.g. html_to_markdown)
-        // evaluate the original content type.
-        let is_utf8_response = response
-            .get_header(header::CONTENT_TYPE)
-            .and_then(|content_type_value| content_type_value.to_str().ok())
-            .map(|content_type_value| content_type_value.to_lowercase().contains("utf-8"))
-            .unwrap_or(false);
-
-        let body_filter = if request_method != Method::HEAD && is_utf8_response {
+        // evaluate the original content type. The library decides per-filter whether
+        // the content type is suitable, so no extra gating is needed here.
+        let body_filter = if request_method != Method::HEAD {
             action.create_filter_body(backend_status_code, &headers, None)
         } else {
             None
