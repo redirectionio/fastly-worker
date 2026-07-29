@@ -257,8 +257,12 @@ impl<'a> Application<'a> {
     ) {
         if !action.should_log_request(true, backend_status_code, None) {
             // Logging was disabled for this request by a "configuration" action: still
-            // count the executed rules, without sending the full request log.
-            self.count_rules(action);
+            // count the executed rules, without sending the full request log. Only when the
+            // agent understands the RULE_COUNT command (protocol >= 1.1), as advertised in
+            // the match response; an older agent has no "rule-count" endpoint.
+            if action.agent_supports_rule_count() {
+                self.count_rules(action);
+            }
 
             return;
         }
