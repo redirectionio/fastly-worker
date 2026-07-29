@@ -1678,9 +1678,9 @@ dependencies = [
 
 [[package]]
 name = "redirectionio"
-version = "3.2.0"
+version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fb8e42db5fec2e4a7f4ba9a52648905395e895e904566e34846afa7d775a626"
+checksum = "852a9db8b73e798c53ea00dfdde1fa6398daf70e05b5a281d1eb18052c252973"
 dependencies = [
  "brotli",
  "cbindgen",
@@ -1715,7 +1715,7 @@ dependencies = [
 
 [[package]]
 name = "redirectionio-fastly-worker"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "chrono",
  "fastly",
