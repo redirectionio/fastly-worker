@@ -155,8 +155,12 @@ impl<'a> Application<'a> {
         }
     }
 
-    pub fn proxy(&self, req: Request, action: &mut Action) -> Result<(Response, u16), Error> {
+    pub fn proxy(&self, mut req: Request, action: &mut Action) -> Result<(Response, u16), Error> {
         let status_code_before_response = action.get_status_code(0, None);
+
+        if status_code_before_response == 0 && action.has_request_header_filters() {
+            filter_request_headers(&mut req, action);
+        }
 
         let request_method = req.get_method().clone();
 
@@ -297,8 +301,9 @@ impl<'a> Application<'a> {
                 Some(ref addr) => addr.to_string(),
                 None => String::from(""),
             }
-                .as_str(),
-        );
+            .as_str(),
+        )
+        .with_tags(action.get_log_tags(backend_status_code, None));
 
         let json = match json_encode(&log) {
             Err(_) => return,
@@ -361,5 +366,31 @@ impl<'a> Application<'a> {
                 None,
             );
         }
+    }
+}
+
+fn filter_request_headers(req: &mut Request, action: &mut Action) {
+    let mut request_headers: Vec<Header> = vec![];
+    let mut filterable_names = vec![];
+
+    for (name, value) in req.get_headers() {
+        // Forwarded untouched rather than dropped, the filters could not see them.
+        if let Ok(s) = value.to_str() {
+            request_headers.push(Header {
+                name: name.to_string(),
+                value: s.to_string(),
+            });
+            filterable_names.push(name.clone());
+        }
+    }
+
+    let filtered_headers = action.filter_request_headers(request_headers, None);
+
+    for name in filterable_names {
+        req.remove_header(name);
+    }
+
+    for header in filtered_headers {
+        req.append_header(header.name, header.value);
     }
 }
