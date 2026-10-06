@@ -199,20 +199,16 @@ impl<'a> Application<'a> {
         }
 
         let mut headers: Vec<Header> = vec![];
+        let mut filterable_names = vec![];
 
-        for name in response.get_header_names() {
-            match response.get_header(name) {
-                Some(value) => {
-                    if let Ok(s) = value.to_str() {
-                        headers.push(Header {
-                            name: name.to_string(),
-                            value: s.to_string(),
-                        });
-                    } else {
-                        continue; // Invalid UTF-8
-                    }
-                }
-                None => continue,
+        for (name, value) in response.get_headers() {
+            // Left untouched, the filters could not see them.
+            if let Ok(s) = value.to_str() {
+                headers.push(Header {
+                    name: name.to_string(),
+                    value: s.to_string(),
+                });
+                filterable_names.push(name.clone());
             }
         }
 
@@ -229,8 +225,12 @@ impl<'a> Application<'a> {
         let headers =
             action.filter_headers(headers, backend_status_code, self.add_rule_ids_header, None);
 
+        for name in filterable_names {
+            response.remove_header(name);
+        }
+
         for header in &headers {
-            response.set_header(header.name.clone(), header.value.clone());
+            response.append_header(header.name.clone(), header.value.clone());
         }
 
         if let Some(mut body_filter) = body_filter {
