@@ -69,7 +69,7 @@ impl<'a> Application<'a> {
             }
 
             if let Ok(s) = value.to_str() {
-                rio_request.add_header(header_name, s.to_string(), true);
+                rio_request.add_header(header_name, s.to_string(), false);
             } else {
                 continue; // Invalid UTF-8
             }
